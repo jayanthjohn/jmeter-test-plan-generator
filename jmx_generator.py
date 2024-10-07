@@ -96,7 +96,7 @@ for index, row in df.iterrows():
     transaction_controller_hash_tree = ET.SubElement(thread_group_hash_tree, 'hashTree')
 
     # Helper function to create an HTTP Sampler in JMeter
-    def create_http_sampler(protocol, domain, port, method, path, body):
+    def create_http_sampler(api_name, protocol, domain, port, method, path, body):
         # Remove leading/trailing spaces in protocol and path
         protocol = protocol.strip()
         path = path.strip()
@@ -127,8 +127,8 @@ for index, row in df.iterrows():
         ET.SubElement(sampler, 'stringProp', {'name': 'HTTPSampler.method'}).text = method
         
         # Add the body to the sampler if it exists
-        if body:
-            body_element = ET.SubElement(sampler, 'stringProp', {'name': 'HTTPSampler.postBody'}).text = body
+        if pd.notna(body) and body:  # Ensure body is not NaN or empty
+            ET.SubElement(sampler, 'stringProp', {'name': 'HTTPSampler.postBody'}).text = body.strip()
 
         # Additional HTTP Sampler properties
         ET.SubElement(sampler, 'boolProp', {'name': 'HTTPSampler.follow_redirects'}).text = 'true'
@@ -163,8 +163,8 @@ for index, row in df.iterrows():
         ET.SubElement(response_assertion, 'collectionProp', {'name': 'ResponseAssertion.results'})
         ET.SubElement(response_assertion, 'boolProp', {'name': 'ResponseAssertion.use_field'}).text = 'true'
         ET.SubElement(response_assertion, 'stringProp', {'name': 'ResponseAssertion.field'}).text = 'Response Code'
-        ET.SubElement(response_assertion, 'stringProp', {'name': 'ResponseAssertion.test_type'}).text = '1'
-        ET.SubElement(response_assertion, 'stringProp', {'name': 'ResponseAssertion.test_string'}).text = '200'  # Assuming 200 OK is expected
+        ET.SubElement(response_assertion, 'stringProp', {'name': 'ResponseAssertion.test_type'}).text = '1'  # Equals
+        ET.SubElement(response_assertion, 'stringProp', {'name': 'ResponseAssertion.test_string'}).text = '200'  # Expected Response Code
         return response_assertion
 
     # Create the HTTP Sampler for each row
@@ -175,7 +175,7 @@ for index, row in df.iterrows():
     path = row['path']
     body = row['body']  # Read the body from the CSV
 
-    sampler = create_http_sampler(protocol, domain, port, method, path, body)
+    sampler = create_http_sampler(api_name, protocol, domain, port, method, path, body)
 
     # Create a Header Manager and Response Assertion
     header_manager = create_header_manager()
@@ -184,11 +184,11 @@ for index, row in df.iterrows():
     # Add the HTTP Sampler directly under the Transaction Controller's hashTree
     transaction_controller_hash_tree.append(sampler)
 
-    # Add Header Manager and Response Assertion under the HTTP sampler
+    # Create a hashTree for the sampler
     sampler_hash_tree = ET.SubElement(transaction_controller_hash_tree, 'hashTree')
     sampler_hash_tree.append(header_manager)
 
-    # Close hashTree after HeaderManager, then add Response Assertion
+    # Create a hashTree for the Response Assertion and add it to the sampler's hashTree
     assertion_hash_tree = ET.SubElement(sampler_hash_tree, 'hashTree')
     assertion_hash_tree.append(response_assertion)
 
