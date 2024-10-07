@@ -9,6 +9,13 @@ df = pd.read_csv(csv_file)
 # Normalize column names by stripping spaces and converting to lowercase
 df.columns = df.columns.str.strip().str.lower()
 
+# Check for missing values in essential columns
+required_columns = ['api_name', 'protocol', 'domain', 'port', 'method', 'path', 'body']
+missing_columns = df[required_columns].isnull().sum()
+if missing_columns.any():
+    print("Warning: Missing values in the following columns:")
+    print(missing_columns[missing_columns > 0])
+
 # Create the root JMeter test plan element with the correct version and properties
 test_plan = ET.Element('jmeterTestPlan', attrib={'version': '1.2', 'properties': '5.0', 'jmeter': '5.1.1 r1855137'})
 root_hash_tree = ET.SubElement(test_plan, 'hashTree')
@@ -40,6 +47,11 @@ test_plan_hash_tree = ET.SubElement(root_hash_tree, 'hashTree')
 
 # Process each row in the CSV and create a Thread Group for each API
 for index, row in df.iterrows():
+    # Ensure that there are no NaN values in the required fields
+    if row[['api_name', 'protocol', 'domain', 'port', 'method', 'path', 'body']].isnull().any():
+        print(f"Skipping row {index + 1} due to missing values.")
+        continue  # Skip this row
+
     api_name = row['api_name']
     
     # Create the Thread Group
@@ -137,26 +149,25 @@ for index, row in df.iterrows():
             'testname': 'HTTP Header Manager', 
             'enabled': 'true'
         })
-        # Create an empty collectionProp
         ET.SubElement(header_manager, 'collectionProp', {'name': 'HeaderManager.headers'})
         return header_manager
 
-    # Helper function to create a Response Assertion without extra stringProp
+    # Helper function to create a Response Assertion
     def create_response_assertion():
         response_assertion = ET.Element('ResponseAssertion', {
-            'guiclass': 'AssertionGui', 
+            'guiclass': 'ResponseAssertionGui', 
             'testclass': 'ResponseAssertion', 
             'testname': 'Response Assertion', 
             'enabled': 'true'
         })
-        ET.SubElement(response_assertion, 'collectionProp', {'name': 'Assertion.test_strings'})  # No stringProp inside
-        ET.SubElement(response_assertion, 'stringProp', {'name': 'Assertion.custom_message'}).text = ''
-        ET.SubElement(response_assertion, 'stringProp', {'name': 'Assertion.test_field'}).text = 'Assertion.response_data'
-        ET.SubElement(response_assertion, 'boolProp', {'name': 'Assertion.assume_success'}).text = 'false'
-        ET.SubElement(response_assertion, 'intProp', {'name': 'Assertion.test_type'}).text = '16'  # 16 means "Contains"
+        ET.SubElement(response_assertion, 'collectionProp', {'name': 'ResponseAssertion.results'})
+        ET.SubElement(response_assertion, 'boolProp', {'name': 'ResponseAssertion.use_field'}).text = 'true'
+        ET.SubElement(response_assertion, 'stringProp', {'name': 'ResponseAssertion.field'}).text = 'Response Code'
+        ET.SubElement(response_assertion, 'stringProp', {'name': 'ResponseAssertion.test_type'}).text = '1'
+        ET.SubElement(response_assertion, 'stringProp', {'name': 'ResponseAssertion.test_string'}).text = '200'  # Assuming 200 OK is expected
         return response_assertion
 
-    # Create an HTTP Sampler for each row
+    # Create the HTTP Sampler for each row
     protocol = row['protocol']
     domain = row['domain']
     port = row['port']
