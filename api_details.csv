@@ -1,4 +1,5 @@
-protocol,domain,port,method,path,body
-https,api.example.com,443,GET,/get_data,
-https,api.example.com,443,POST,/post_data,{"key": "value"}
-http,localhost,8080,PUT,/put_data,{"update": "new value"}
+api_name,protocol,domain,port,method,path,body
+UserAPI,https,www.example.com,443,GET,/users,
+ProductAPI,https,api.example.com,443,POST,/products,"{""name"":""Product1"",""price"":100}"
+OrderAPI,http,orders.example.com,80,GET,/orders,
+PaymentAPI,https,payments.example.com,443,POST,/payments,"{""amount"":""100"",""currency"":""USD""}"
