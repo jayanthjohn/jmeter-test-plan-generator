@@ -40,4 +40,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: output-jmx
-          path: jmeter_script.jmx
+          path: generated_test_plan.jmx
