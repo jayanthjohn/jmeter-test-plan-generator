@@ -1,0 +1,43 @@
+name: JMeter Script Generator CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+# Define the jobs to run in this workflow
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the code from the repository
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      # Step 2: Set up Python environment
+      - name: Set up Python 3.x
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      # Step 3: Install pandas package
+      - name: Install pandas
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas
+
+      # Step 4: Run the Python script with a sample input CSV file
+      - name: Run JMeter Script Generator
+        run: |
+          python jmx_generator.py
+
+      # Step 5: Upload generated JMX file as an artifact (Optional)
+      - name: Upload Generated JMX File
+        uses: actions/upload-artifact@v3
+        with:
+          name: output-jmx
+          path: jmeter_script.jmx
