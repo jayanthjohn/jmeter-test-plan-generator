@@ -1,0 +1,4 @@
+protocol,domain,port,method,path,body
+https,api.example.com,443,GET,/get_data,
+https,api.example.com,443,POST,/post_data,{"key": "value"}
+http,localhost,8080,PUT,/put_data,{"update": "new value"}
