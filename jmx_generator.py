@@ -3,7 +3,21 @@ import xml.etree.ElementTree as ET
 
 def create_jmeter_script(csv_file, jmeter_script_file):
     # Read the CSV file
-    df = pd.read_csv(csv_file)
+    try:
+        print(f"Reading the CSV file: {csv_file}")
+        df = pd.read_csv(csv_file)
+        print("CSV file read successfully.")
+        print("Dataframe contents:")
+        print(df.head())  # Print the first few rows of the dataframe for verification
+    except FileNotFoundError:
+        print(f"Error: The file {csv_file} was not found.")
+        return
+    except pd.errors.EmptyDataError:
+        print(f"Error: The file {csv_file} is empty.")
+        return
+    except pd.errors.ParserError:
+        print(f"Error: There was a parsing error with the file {csv_file}.")
+        return
 
     # Create the root element for JMeter
     jmeter = ET.Element('jmeterTestPlan')
@@ -19,6 +33,8 @@ def create_jmeter_script(csv_file, jmeter_script_file):
 
     # Add a thread group for each API
     for _, row in df.iterrows():
+        print(f"Processing API: {row['api_name']}")
+        
         # Create a Thread Group
         thread_group = ET.SubElement(jmeter, 'ThreadGroup')
         thread_group.set('guiclass', 'ThreadGroupGui')
@@ -63,6 +79,9 @@ def create_jmeter_script(csv_file, jmeter_script_file):
         if row['method'].upper() != 'GET':
             body_data = ET.SubElement(http_sampler, 'BodyData')
             body_data.text = row['body']
+            print(f"Added body data for {row['api_name']}: {row['body']}")  # Debugging statement
+        else:
+            print(f"No body data for GET request: {row['api_name']}")  # Debugging statement
 
         # Add Response Assertion
         response_assertion = ET.SubElement(http_sampler, 'ResponseAssertion')
@@ -83,6 +102,7 @@ def create_jmeter_script(csv_file, jmeter_script_file):
     # Create a tree from the root and write to an XML file
     tree = ET.ElementTree(jmeter)
     tree.write(jmeter_script_file, encoding='utf-8', xml_declaration=True)
+    print(f"JMeter script created successfully: {jmeter_script_file}")
 
 # Example usage
 csv_file = 'api_details.csv'  # Path to your CSV file
