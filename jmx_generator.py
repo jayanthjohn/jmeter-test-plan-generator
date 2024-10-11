@@ -1,110 +1,92 @@
-import pandas as pd
-import xml.etree.ElementTree as ET
+import csv
+from jinja2 import Template
 
-def create_jmeter_script(csv_file, jmeter_script_file):
-    # Read the CSV file
-    try:
-        print(f"Reading the CSV file: {csv_file}")
-        df = pd.read_csv(csv_file)
-        print("CSV file read successfully.")
-        print("Dataframe contents:")
-        print(df.head())  # Print the first few rows of the dataframe for verification
-    except FileNotFoundError:
-        print(f"Error: The file {csv_file} was not found.")
-        return
-    except pd.errors.EmptyDataError:
-        print(f"Error: The file {csv_file} is empty.")
-        return
-    except pd.errors.ParserError:
-        print(f"Error: There was a parsing error with the file {csv_file}.")
-        return
+# Sample JMeter XML template using Jinja2
+jmeter_template = """
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.3">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="Test Plan">
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+        <collectionProp name="Arguments.arguments"/>
+      </elementProp>
+    </TestPlan>
+    <hashTree>
+      {% for api in apis %}
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="{{ api['api_name'] }} Thread Group">
+        <intProp name="ThreadGroup.num_threads">1</intProp>
+        <intProp name="ThreadGroup.ramp_time">1</intProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
+          <stringProp name="LoopController.loops">1</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
+      </ThreadGroup>
+      <hashTree>
+        <TransactionController guiclass="TransactionControllerGui" testclass="TransactionController" testname="{{ api['api_name'] }} Transaction Controller"/>
+        <hashTree>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="{{ api['api_name'] }} HTTP Request">
+            <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+            <stringProp name="HTTPSampler.method">{{ api['method'] }}</stringProp>
+            <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+            <stringProp name="HTTPSampler.protocol">{{ api['protocol'] }}</stringProp>
+            <stringProp name="HTTPSampler.domain">{{ api['domain'] }}</stringProp>
+            <stringProp name="HTTPSampler.port">{{ api['port'] }}</stringProp>
+            <stringProp name="HTTPSampler.path">{{ api['path'] }}</stringProp>
+            {% if api['method'] != 'GET' %}
+            <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+            <stringProp name="HTTPSampler.arguments">{{ api['body'] }}</stringProp>
+            {% else %}
+            <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+            {% endif %}
+          </HTTPSamplerProxy>
+          <hashTree>
+            <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Header Manager">
+              <collectionProp name="HeaderManager.headers"/>
+            </HeaderManager>
+            <hashTree/>
+            <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Response Assertion">
+              <collectionProp name="Assertion.test_strings"/>
+              <stringProp name="Assertion.custom_message"></stringProp>
+              <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
+              <boolProp name="Assertion.assume_success">false</boolProp>
+              <intProp name="Assertion.test_type">16</intProp>
+            </ResponseAssertion>
+            <hashTree/>
+          </hashTree>
+        </hashTree>
+      </hashTree>
+      {% endfor %}
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>
+"""
 
-    # Create the root element for JMeter
-    jmeter = ET.Element('jmeterTestPlan')
-    jmeter.set('version', '1.2')
-    jmeter.set('properties', '5.0')
+# Load CSV data
+def load_api_data(csv_file):
+    apis = []
+    with open(csv_file, mode='r') as file:
+        csv_reader = csv.DictReader(file)
+        for row in csv_reader:
+            apis.append(row)
+    return apis
+
+# Render the JMeter template with data from the CSV
+def generate_jmeter_script(csv_file, output_file):
+    apis = load_api_data(csv_file)
     
-    # Add a test plan
-    test_plan = ET.SubElement(jmeter, 'TestPlan')
-    test_plan.set('guiclass', 'TestPlanGui')
-    test_plan.set('testclass', 'TestPlan')
-    test_plan.set('testname', 'API Test Plan')
-    test_plan.set('enabled', 'true')
+    # Initialize the Jinja2 template
+    template = Template(jmeter_template)
+    
+    # Render the template with the data
+    jmeter_script = template.render(apis=apis)
+    
+    # Write the JMeter script to a file
+    with open(output_file, 'w') as file:
+        file.write(jmeter_script)
 
-    # Add a thread group for each API
-    for _, row in df.iterrows():
-        print(f"Processing API: {row['api_name']}")
-        
-        # Create a Thread Group
-        thread_group = ET.SubElement(jmeter, 'ThreadGroup')
-        thread_group.set('guiclass', 'ThreadGroupGui')
-        thread_group.set('testclass', 'ThreadGroup')
-        thread_group.set('testname', row['api_name'])
-        thread_group.set('enabled', 'true')
-        
-        # Add Transaction Controller
-        transaction_controller = ET.SubElement(thread_group, 'TransactionController')
-        transaction_controller.set('guiclass', 'TransactionControllerGui')
-        transaction_controller.set('testclass', 'TransactionController')
-        transaction_controller.set('testname', 'Transaction for ' + row['api_name'])
-        transaction_controller.set('enabled', 'true')
-
-        # Create HTTP Sampler
-        http_sampler = ET.SubElement(transaction_controller, 'HTTPSamplerProxy')
-        http_sampler.set('guiclass', 'HttpTestSampleGui')
-        http_sampler.set('testclass', 'HTTPSamplerProxy')
-        http_sampler.set('testname', row['api_name'])
-        http_sampler.set('enabled', 'true')
-
-        # Set sampler details
-        http_sampler.set('protocol', row['protocol'])
-        http_sampler.set('domain', row['domain'])
-        http_sampler.set('port', str(row['port']))
-        http_sampler.set('path', row['path'])
-        http_sampler.set('method', row['method'])
-        
-        # Add HTTP Header Manager
-        header_manager = ET.SubElement(http_sampler, 'HeaderManager')
-        header_manager.set('guiclass', 'HeaderPanel')
-        header_manager.set('testclass', 'HeaderManager')
-        header_manager.set('testname', 'HTTP Header Manager')
-        header_manager.set('enabled', 'true')
-
-        # Example: Adding a Content-Type header
-        content_type = ET.SubElement(header_manager, 'Header')
-        content_type.set('name', 'Content-Type')
-        content_type.set('value', 'application/json')
-
-        # Add Body Data if the method is not GET
-        if row['method'].upper() != 'GET':
-            body_data = ET.SubElement(http_sampler, 'BodyData')
-            body_data.text = row['body']
-            print(f"Added body data for {row['api_name']}: {row['body']}")  # Debugging statement
-        else:
-            print(f"No body data for GET request: {row['api_name']}")  # Debugging statement
-
-        # Add Response Assertion
-        response_assertion = ET.SubElement(http_sampler, 'ResponseAssertion')
-        response_assertion.set('guiclass', 'ResponseAssertionGui')
-        response_assertion.set('testclass', 'ResponseAssertion')
-        response_assertion.set('testname', 'Response Assertion for ' + row['api_name'])
-        response_assertion.set('enabled', 'true')
-
-        # Add assertions to check for a successful response code
-        response_field = ET.SubElement(response_assertion, 'collectionType')
-        response_field.text = '0'  # Check response code
-
-        # Add a response code to assert (e.g., 200)
-        response_code = ET.SubElement(response_assertion, 'testField')
-        response_code.set('test_field', 'Response Code')
-        response_code.text = '200'  # Expecting HTTP 200 OK
-
-    # Create a tree from the root and write to an XML file
-    tree = ET.ElementTree(jmeter)
-    tree.write(jmeter_script_file, encoding='utf-8', xml_declaration=True)
-    print(f"JMeter script created successfully: {jmeter_script_file}")
-
-# Example usage
-csv_file = 'api_details.csv'  # Path to your CSV file
-jmeter_script_file = 'generated_test_plan.jmx'  # Output JMeter script file
-create_jmeter_script(csv_file, jmeter_script_file)
+# Usage
+csv_file = 'api_details.csv'  # Input CSV file
+output_file = 'test_plan.jmx'  # Output JMX file
+generate_jmeter_script(csv_file, output_file)
