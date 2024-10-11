@@ -1,10 +1,13 @@
 This Python script (jmx_generator.py) generates a JMeter .jmx test plan file from a CSV file containing API details. Each API request is represented as a separate Thread Group in the test plan, with a Transaction Controller and HTTP Sampler. The generated JMeter test plan can then be used for performance testing in JMeter.
+
+
 **Features**
     •	Generates a JMeter test plan with one Thread Group per API request.
     •	Supports both GET and POST (or other) HTTP methods.
     •	Automatically creates an HTTP Sampler with the specified headers, protocol, domain, port, method, and path.
     •	Adds a Response Assertion and HTTP Header Manager for each API.
     •	The POST requests automatically include the request body from the CSV.
+
 **Prerequisites**
     •	Python 3.x
     •	Jinja2 template engine
@@ -48,10 +51,13 @@ The script does the following:
     •	For each API, it creates a Thread Group, Transaction Controller, HTTP Sampler, HTTP Header Manager, and Response Assertion.
     •	If the HTTP method is POST or any other method with a body, it includes the body from the CSV in the HTTP Sampler.
 
+
 **Example**
 If your CSV file is named api_details.csv, you can generate a JMeter script like this:
 python jmx_generator.py
 The output will be saved as **test_plan.jmx**, ready to be opened in JMeter.
+
+
 **Customization**
 You can modify the script or the Jinja2 template to suit your specific requirements, such as:
     •	Adding additional request headers.
