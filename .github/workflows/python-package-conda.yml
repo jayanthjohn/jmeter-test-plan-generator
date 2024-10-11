@@ -25,7 +25,7 @@ jobs:
           python-version: '3.x'
 
       # Step 3: Install pandas package
-      - name: Install pandas
+      - name: Install jinja2
         run: |
           python -m pip install --upgrade pip
           pip install pandas
@@ -40,4 +40,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: output-jmx
-          path: generated_test_plan.jmx
+          path: test_plan.jmx
