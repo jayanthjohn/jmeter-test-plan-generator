@@ -3,3 +3,4 @@ UserAPI,https,www.example.com,443,GET,/users,
 ProductAPI,https,api.example.com,443,POST,/users,"(""''name""Producti""price"":100)"
 OrderAPI,http,orders.example.com,80,GET,/orders,
 SampleProduct,http,orders.example.com,667,POST,/new/old,"(""''name""Producti""price"":100)"
+SampleProduct4,http,orders.example.com,667,POST,/new/old,"(""''name""Producti""price"":100)"
